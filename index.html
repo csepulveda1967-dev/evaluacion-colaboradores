@@ -1,0 +1,1884 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#2c5282">
+<meta name="description" content="Sistema de evaluación para garzones - El Desde de un Garzón">
+<title>Evaluación de Garzones</title>
+
+<!-- PWA Manifest -->
+<link rel="manifest" href="./manifest.json">
+
+<!-- Iconos para diferentes dispositivos -->
+<link rel="icon" type="image/png" sizes="32x32" href="./icons/icon-192x192.png">
+<link rel="apple-touch-icon" href="./icons/icon-192x192.png">
+
+<!-- Biblioteca Excel -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha384-BJ+2hNOCNz3NKJK9rFgRFXHXVMkDqhJfLbFTmBfFSHkJFjFKHdTBjrUGRkFvBXM" crossorigin="anonymous"></script>
+
+<style>
+:root{
+  color-scheme:light;
+  --blue:#2c5282;
+  --blue-light:#4299e1;
+  --green:#276749;
+  --green-bg:#f0fff4;
+  --green-border:#9ae6b4;
+  --yellow:#92400e;
+  --yellow-bg:#fffbeb;
+  --yellow-border:#fcd34d;
+  --red:#9b1c1c;
+  --red-bg:#fff5f5;
+  --red-border:#fc8181;
+  --gray-50:#f9fafb;
+  --gray-100:#f3f4f6;
+  --gray-200:#e5e7eb;
+  --gray-400:#9ca3af;
+  --gray-600:#4b5563;
+  --gray-800:#1f2937;
+}
+
+* {
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+  -webkit-tap-highlight-color: rgba(0,0,0,0);
+}
+
+body {
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;
+  background:#f1f5f9;
+  min-height:100vh;
+  color:var(--gray-800);
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* ─── INSTALACIÓN PWA BANNER ─── */
+.install-banner {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(135deg, var(--blue) 0%, #1e3a6e 100%);
+  color: white;
+  padding: 16px 20px;
+  display: none;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 -4px 12px rgba(0,0,0,0.15);
+  z-index: 1000;
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.install-banner.show {
+  display: flex;
+}
+
+.install-banner-content {
+  flex: 1;
+}
+
+.install-banner-content h3 {
+  font-size: 16px;
+  margin-bottom: 4px;
+}
+
+.install-banner-content p {
+  font-size: 13px;
+  opacity: 0.9;
+}
+
+.install-banner-btn {
+  background: white;
+  color: var(--blue);
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.install-banner-close {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 4px;
+  opacity: 0.7;
+}
+
+/* ─── ESTADO OFFLINE ─── */
+.offline-indicator {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: #fef3c7;
+  color: #92400e;
+  padding: 8px 16px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  display: none;
+  z-index: 999;
+  border-bottom: 2px solid #fcd34d;
+}
+
+.offline-indicator.show {
+  display: block;
+}
+
+/* ─── HEADER (OPTIMIZADO PARA TABLETS) ─── */
+.app-header {
+  background:var(--blue);
+  color:white;
+  padding: 24px 32px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  box-shadow:0 2px 8px rgba(0,0,0,.25);
+}
+
+.app-header h1 {
+  font-size: 24px;
+  font-weight:700;
+}
+
+.app-header span {
+  font-size: 15px;
+  opacity:.8;
+}
+
+.app-header-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.header-btn {
+  background: rgba(255,255,255,0.2);
+  border: 2px solid rgba(255,255,255,0.3);
+  color: white;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+
+.header-btn:active {
+  transform: scale(0.95);
+  background: rgba(255,255,255,0.3);
+}
+
+/* ─── LAYOUT ─── */
+.layout {
+  display:grid;
+  grid-template-columns:300px 1fr;
+  min-height:calc(100vh - 76px);
+}
+
+/* ─── SIDEBAR (OPTIMIZADA PARA TÁCTIL) ─── */
+.sidebar {
+  background:white;
+  border-right:1px solid var(--gray-200);
+  padding:28px 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.sidebar-title {
+  padding:0 24px 18px;
+  font-size:12px;
+  font-weight:700;
+  letter-spacing:.08em;
+  color:var(--gray-400);
+  text-transform:uppercase;
+}
+
+.nav-item {
+  display:flex;
+  align-items:center;
+  gap:14px;
+  padding: 16px 24px;
+  cursor:pointer;
+  border-left:4px solid transparent;
+  transition:all .2s;
+  font-size: 15px;
+  color:var(--gray-600);
+  min-height: 56px;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.nav-item:active {
+  background: var(--gray-100);
+}
+
+.nav-item.active {
+  background:#eff6ff;
+  border-left-color:var(--blue);
+  color:var(--blue);
+  font-weight:600;
+}
+
+.nav-item .nav-icon {
+  width:32px;
+  height:32px;
+  border-radius:8px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size: 16px;
+  flex-shrink:0;
+}
+
+.nav-item .badge {
+  margin-left:auto;
+  background:var(--gray-200);
+  color:var(--gray-600);
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius:99px;
+  font-weight:600;
+  min-width: 42px;
+  text-align: center;
+}
+
+.nav-item.done .badge {
+  background:#d1fae5;
+  color:var(--green);
+}
+
+/* ─── MAIN ─── */
+.main {
+  padding:36px;
+  overflow-y:auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.section {
+  display:none;
+}
+
+.section.active {
+  display:block;
+}
+
+/* ─── CARD ─── */
+.card {
+  background:white;
+  border-radius:16px;
+  box-shadow:0 1px 4px rgba(0,0,0,.08),0 4px 16px rgba(0,0,0,.04);
+  margin-bottom:28px;
+  overflow:hidden;
+}
+
+.card-header {
+  padding: 22px 28px;
+  border-bottom:1px solid var(--gray-100);
+  display:flex;
+  align-items:center;
+  gap:14px;
+}
+
+.card-header h2 {
+  font-size: 18px;
+  font-weight:700;
+  color:var(--gray-800);
+}
+
+.card-header .tag {
+  font-size: 12px;
+  padding: 5px 12px;
+  border-radius:99px;
+  font-weight:600;
+}
+
+.tag-blue{background:#dbeafe;color:#1e40af;}
+.tag-green{background:#d1fae5;color:var(--green);}
+.tag-red{background:#fee2e2;color:var(--red);}
+.tag-yellow{background:#fef3c7;color:var(--yellow);}
+
+.card-body {
+  padding:28px;
+}
+
+/* ─── FORMULARIOS (OPTIMIZADOS PARA TÁCTIL) ─── */
+.form-grid {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:20px;
+}
+
+.form-grid.three {
+  grid-template-columns:1fr 1fr 1fr;
+}
+
+.form-group {
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+
+.form-group label {
+  font-size: 13px;
+  font-weight:600;
+  color:var(--gray-600);
+  text-transform:uppercase;
+  letter-spacing:.05em;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  padding: 14px 16px;
+  border:2px solid var(--gray-200);
+  border-radius:10px;
+  font-size: 16px;
+  color:var(--gray-800);
+  background:white;
+  transition:border-color .2s;
+  min-height: 48px;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  outline:none;
+  border-color:var(--blue-light);
+}
+
+.form-group textarea {
+  resize:vertical;
+  font-family:inherit;
+  min-height: 100px;
+}
+
+/* ─── CRITERIOS (OPTIMIZADOS PARA TÁCTIL) ─── */
+.criteria-list {
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+
+.criteria-item {
+  display:grid;
+  grid-template-columns:1fr 160px 240px;
+  align-items:center;
+  gap:18px;
+  padding: 16px 18px;
+  border-radius:10px;
+  transition:background .15s;
+  min-height: 68px;
+}
+
+.criteria-item:active {
+  background:var(--gray-50);
+}
+
+.criteria-item .name {
+  font-size: 15px;
+  color:var(--gray-800);
+  line-height: 1.4;
+}
+
+.toggle-group {
+  display:flex;
+  border-radius:10px;
+  overflow:hidden;
+  border:3px solid var(--gray-200);
+  min-height: 48px;
+}
+
+.toggle-btn {
+  flex:1;
+  padding: 10px;
+  font-size: 14px;
+  font-weight:600;
+  border:none;
+  cursor:pointer;
+  background:white;
+  color:var(--gray-400);
+  transition:all .15s;
+  min-height: 46px;
+}
+
+.toggle-btn:active {
+  transform: scale(0.95);
+}
+
+.toggle-btn.cumple.active {
+  background:var(--green);
+  color:white;
+}
+
+.toggle-btn.no-cumple.active {
+  background:#ef4444;
+  color:white;
+}
+
+.obs-input {
+  padding: 10px 14px;
+  border:2px solid var(--gray-200);
+  border-radius:10px;
+  font-size: 14px;
+  width:100%;
+  transition:border-color .2s;
+  min-height: 48px;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.obs-input:focus {
+  outline:none;
+  border-color:var(--blue-light);
+}
+
+/* ─── PLAN DE ACCIÓN ─── */
+.plan-item {
+  background:var(--gray-50);
+  border-radius:12px;
+  padding:20px;
+  margin-bottom:16px;
+  border:1px solid var(--gray-200);
+}
+
+.plan-item-header {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:16px;
+}
+
+.plan-item-header span {
+  font-size: 14px;
+  font-weight:600;
+  color:var(--gray-800);
+}
+
+.btn-remove {
+  background:none;
+  border:none;
+  cursor:pointer;
+  color:var(--gray-400);
+  font-size: 22px;
+  line-height:1;
+  padding: 8px;
+  min-width: 40px;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-remove:active {
+  color:#ef4444;
+  transform: scale(0.9);
+}
+
+.plan-fields {
+  display:grid;
+  grid-template-columns:1fr 1fr 160px;
+  gap:12px;
+}
+
+/* ─── RESULTADOS ─── */
+.summary-grid {
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:18px;
+  margin-bottom:28px;
+}
+
+.summary-card {
+  border-radius:14px;
+  padding:24px;
+  text-align:center;
+}
+
+.summary-card .label {
+  font-size: 12px;
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:.06em;
+  margin-bottom:10px;
+  opacity:.75;
+}
+
+.summary-card .value {
+  font-size: 38px;
+  font-weight:800;
+  line-height:1;
+}
+
+.summary-card.green{background:var(--green-bg);color:var(--green);border:2px solid var(--green-border);}
+.summary-card.yellow{background:var(--yellow-bg);color:var(--yellow);border:2px solid var(--yellow-border);}
+.summary-card.red{background:var(--red-bg);color:var(--red);border:2px solid var(--red-border);}
+.summary-card.blue{background:#eff6ff;color:#1e40af;border:2px solid #bfdbfe;}
+
+.result-badge {
+  display:inline-flex;
+  align-items:center;
+  gap:10px;
+  padding: 14px 26px;
+  border-radius:99px;
+  font-size: 17px;
+  font-weight:700;
+}
+
+.result-badge.aprobado{background:#d1fae5;color:var(--green);}
+.result-badge.refuerzo{background:#fef3c7;color:var(--yellow);}
+.result-badge.no-aprobado{background:#fee2e2;color:var(--red);}
+
+/* ─── BARRA PROGRESO ─── */
+.progress-bar {
+  height:12px;
+  background:var(--gray-200);
+  border-radius:99px;
+  overflow:hidden;
+  margin-top:8px;
+}
+
+.progress-fill {
+  height:100%;
+  border-radius:99px;
+  transition:width .6s;
+}
+
+.fill-green{background:#10b981;}
+.fill-yellow{background:#f59e0b;}
+.fill-red{background:#ef4444;}
+
+/* ─── BOTONES (OPTIMIZADOS PARA TÁCTIL) ─── */
+.btn {
+  display:inline-flex;
+  align-items:center;
+  gap:10px;
+  padding: 16px 28px;
+  border-radius:10px;
+  font-size: 16px;
+  font-weight:600;
+  border:none;
+  cursor:pointer;
+  transition:all .2s;
+  min-height: 56px;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.btn:active {
+  transform: scale(0.96);
+}
+
+.btn-primary {
+  background:var(--blue);
+  color:white;
+}
+
+.btn-primary:hover {
+  background:#1e3a6e;
+  box-shadow:0 4px 12px rgba(44,82,130,.3);
+}
+
+.btn-success {
+  background:#059669;
+  color:white;
+}
+
+.btn-success:hover {
+  background:#047857;
+  box-shadow:0 4px 12px rgba(5,150,105,.3);
+}
+
+.btn-outline {
+  background:white;
+  color:var(--gray-800);
+  border:3px solid var(--gray-200);
+}
+
+.btn-outline:hover {
+  border-color:var(--blue);
+  color:var(--blue);
+}
+
+.btn-danger {
+  background:#ef4444;
+  color:white;
+}
+
+.btn-danger:hover {
+  background:#dc2626;
+}
+
+.btn-sm {
+  padding: 10px 18px;
+  font-size: 14px;
+  min-height: 44px;
+}
+
+.btn-row {
+  display:flex;
+  gap:14px;
+  align-items:center;
+  flex-wrap:wrap;
+}
+
+/* ─── ALERTAS ─── */
+.alert {
+  padding: 16px 20px;
+  border-radius:12px;
+  display:flex;
+  align-items:start;
+  gap:12px;
+  font-size: 15px;
+}
+
+.alert-info{background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;}
+.alert-success{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border);}
+.alert-warn{background:var(--yellow-bg);color:var(--yellow);border:1px solid var(--yellow-border);}
+
+/* ─── HISTORIAL ─── */
+.history-table {
+  width:100%;
+  border-collapse:collapse;
+  font-size: 14px;
+}
+
+.history-table th {
+  background:var(--gray-50);
+  padding: 14px 16px;
+  text-align:left;
+  font-size: 12px;
+  font-weight:700;
+  letter-spacing:.05em;
+  color:var(--gray-400);
+  text-transform:uppercase;
+  border-bottom:2px solid var(--gray-200);
+}
+
+.history-table td {
+  padding: 16px;
+  border-bottom:1px solid var(--gray-100);
+}
+
+.history-table tr:active td {
+  background:var(--gray-50);
+}
+
+.chip {
+  display:inline-block;
+  padding: 5px 12px;
+  border-radius:99px;
+  font-size: 12px;
+  font-weight:700;
+}
+
+.chip-green{background:#d1fae5;color:var(--green);}
+.chip-yellow{background:#fef3c7;color:var(--yellow);}
+.chip-red{background:#fee2e2;color:var(--red);}
+
+.empty-state {
+  text-align:center;
+  padding:56px 28px;
+  color:var(--gray-400);
+}
+
+.empty-state .icon {
+  font-size: 56px;
+  margin-bottom:16px;
+}
+
+.empty-state p {
+  font-size: 15px;
+}
+
+/* ─── RESPONSIVE PARA TABLETS PEQUEÑAS Y MÓVILES ─── */
+@media(max-width:1024px){
+  .layout {
+    grid-template-columns:1fr;
+  }
+
+  .sidebar {
+    display:none;
+  }
+
+  .form-grid,
+  .form-grid.three,
+  .summary-grid,
+  .plan-fields {
+    grid-template-columns:1fr;
+  }
+
+  .criteria-item {
+    grid-template-columns:1fr;
+    gap:12px;
+  }
+
+  .app-header {
+    padding: 20px 24px;
+  }
+
+  .app-header h1 {
+    font-size: 20px;
+  }
+
+  .main {
+    padding: 24px;
+  }
+}
+
+/* ─── MENÚ MÓVIL FLOTANTE ─── */
+.mobile-nav {
+  display: none;
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 100;
+}
+
+.mobile-nav-btn {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--blue);
+  color: white;
+  border: none;
+  font-size: 28px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mobile-nav-btn:active {
+  transform: scale(0.9);
+}
+
+.mobile-nav-menu {
+  position: absolute;
+  bottom: 76px;
+  right: 0;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+  padding: 8px;
+  min-width: 280px;
+  display: none;
+}
+
+.mobile-nav-menu.show {
+  display: block;
+  animation: slideIn 0.2s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.mobile-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 15px;
+  color: var(--gray-700);
+  transition: background 0.15s;
+}
+
+.mobile-nav-item:active {
+  background: var(--gray-100);
+}
+
+.mobile-nav-item.active {
+  background: #eff6ff;
+  color: var(--blue);
+  font-weight: 600;
+}
+
+@media(max-width:1024px){
+  .mobile-nav {
+    display: block;
+  }
+}
+</style>
+</head>
+<body>
+
+<!-- Banner de instalación PWA -->
+<div class="install-banner" id="installBanner">
+  <div class="install-banner-content">
+    <h3>📱 Instalar aplicación</h3>
+    <p>Úsala offline y accede más rápido</p>
+  </div>
+  <button class="install-banner-btn" id="installBtn">Instalar</button>
+  <button class="install-banner-close" id="closeBanner">×</button>
+</div>
+
+<!-- Indicador de estado offline -->
+<div class="offline-indicator" id="offlineIndicator">
+  ⚠️ Sin conexión - Trabajando en modo offline
+</div>
+
+<!-- Header -->
+<div class="app-header">
+  <div>
+    <h1>🍽 Evaluación de Garzones</h1>
+    <span>El Desde de un Garzón — Panel del Supervisor</span>
+  </div>
+  <div class="app-header-actions">
+    <button class="header-btn" onclick="location.reload()" title="Actualizar">
+      <span>🔄</span>
+    </button>
+  </div>
+</div>
+
+<!-- Layout principal -->
+<div class="layout">
+  <!-- SIDEBAR -->
+  <nav class="sidebar">
+    <div class="sidebar-title">Etapas de evaluación</div>
+    <div class="nav-item active" onclick="goTo('s-datos',this)">
+      <div class="nav-icon">1️⃣</div>
+      <span>Datos del evaluado</span>
+    </div>
+    <div class="nav-item" onclick="goTo('s-imagen',this)">
+      <div class="nav-icon">👔</div>
+      <span>Imagen personal</span>
+      <span class="badge" id="b-imagen">—</span>
+    </div>
+    <div class="nav-item" onclick="goTo('s-plaza',this)">
+      <div class="nav-icon">📋</div>
+      <span>Preparación de plaza</span>
+      <span class="badge" id="b-plaza">—</span>
+    </div>
+    <div class="nav-item" onclick="goTo('s-cliente',this)">
+      <div class="nav-icon">🙋</div>
+      <span>Atención al cliente</span>
+      <span class="badge" id="b-cliente">—</span>
+    </div>
+    <div class="nav-item" onclick="goTo('s-ventas',this)">
+      <div class="nav-icon">💬</div>
+      <span>Asesoría de ventas</span>
+      <span class="badge" id="b-ventas">—</span>
+    </div>
+    <div class="nav-item" onclick="goTo('s-conducta',this)">
+      <div class="nav-icon">🚫</div>
+      <span>Conductas prohibidas</span>
+      <span class="badge" id="b-conducta">—</span>
+    </div>
+    <div class="nav-item" onclick="goTo('s-tarjeta',this)">
+      <div class="nav-icon">🟡</div>
+      <span>Tarjeta amarilla / roja</span>
+      <span class="badge" id="b-tarjeta">—</span>
+    </div>
+    <div class="nav-item" onclick="goTo('s-plan',this)">
+      <div class="nav-icon">📝</div>
+      <span>Plan de acción</span>
+    </div>
+    <div class="nav-item" onclick="goTo('s-resultado',this)">
+      <div class="nav-icon">📊</div>
+      <span>Resultado final</span>
+    </div>
+    <div class="nav-item" onclick="goTo('s-historial',this)">
+      <div class="nav-icon">🗂</div>
+      <span>Historial</span>
+    </div>
+  </nav>
+
+  <!-- MAIN CONTENT -->
+  <main class="main">
+
+    <!-- 1. DATOS DEL EVALUADO -->
+    <div class="section active" id="s-datos">
+      <div class="card">
+        <div class="card-header">
+          <h2>Datos del evaluado</h2>
+          <span class="tag tag-blue">Paso 1 de 8</span>
+        </div>
+        <div class="card-body">
+          <div class="form-grid" style="margin-bottom:20px;">
+            <div class="form-group">
+              <label>Nombre completo *</label>
+              <input id="d-nombre" type="text" placeholder="Nombre y apellido del garzón">
+            </div>
+            <div class="form-group">
+              <label>RUT *</label>
+              <input id="d-rut" type="text" placeholder="12.345.678-9">
+            </div>
+          </div>
+          <div class="form-grid three" style="margin-bottom:20px;">
+            <div class="form-group">
+              <label>Cargo</label>
+              <select id="d-cargo">
+                <option value="Garzón">Garzón</option>
+                <option value="Garzón Junior">Garzón Junior</option>
+                <option value="Garzón Senior">Garzón Senior</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Local / Restaurante</label>
+              <input id="d-local" type="text" placeholder="Nombre del local">
+            </div>
+            <div class="form-group">
+              <label>Turno</label>
+              <select id="d-turno">
+                <option value="Mañana">Mañana</option>
+                <option value="Tarde">Tarde</option>
+                <option value="Noche">Noche</option>
+                <option value="Partido">Partido</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Evaluador (supervisor / jefe de turno) *</label>
+              <input id="d-evaluador" type="text" placeholder="Nombre del supervisor">
+            </div>
+            <div class="form-group">
+              <label>Fecha de evaluación</label>
+              <input id="d-fecha" type="date">
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="goToId('s-imagen')">Continuar →</button>
+      </div>
+    </div>
+
+    <!-- 2. IMAGEN PERSONAL -->
+    <div class="section" id="s-imagen">
+      <div class="card">
+        <div class="card-header">
+          <h2>👔 Imagen personal</h2>
+          <span class="tag tag-blue">Paso 2 de 8</span>
+        </div>
+        <div class="card-body">
+          <div class="alert alert-info" style="margin-bottom:22px;">
+            <span>ℹ️</span>
+            <span>Evalúe la presentación del garzón al inicio del turno y durante el servicio.</span>
+          </div>
+          <div class="criteria-list" id="cl-imagen"></div>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-outline" onclick="goToId('s-datos')">← Anterior</button>
+        <button class="btn btn-primary" onclick="goToId('s-plaza')">Continuar →</button>
+      </div>
+    </div>
+
+    <!-- 3. PREPARACIÓN DE PLAZA -->
+    <div class="section" id="s-plaza">
+      <div class="card">
+        <div class="card-header">
+          <h2>📋 Preparación de la plaza</h2>
+          <span class="tag tag-blue">Paso 3 de 8</span>
+        </div>
+        <div class="card-body">
+          <div class="criteria-list" id="cl-plaza"></div>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-outline" onclick="goToId('s-imagen')">← Anterior</button>
+        <button class="btn btn-primary" onclick="goToId('s-cliente')">Continuar →</button>
+      </div>
+    </div>
+
+    <!-- 4. ATENCIÓN AL CLIENTE -->
+    <div class="section" id="s-cliente">
+      <div class="card">
+        <div class="card-header">
+          <h2>🙋 Atención al cliente</h2>
+          <span class="tag tag-blue">Paso 4 de 8</span>
+        </div>
+        <div class="card-body">
+          <div class="criteria-list" id="cl-cliente"></div>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-outline" onclick="goToId('s-plaza')">← Anterior</button>
+        <button class="btn btn-primary" onclick="goToId('s-ventas')">Continuar →</button>
+      </div>
+    </div>
+
+    <!-- 5. ASESORÍA DE VENTAS -->
+    <div class="section" id="s-ventas">
+      <div class="card">
+        <div class="card-header">
+          <h2>💬 Asesoría de ventas</h2>
+          <span class="tag tag-blue">Paso 5 de 8</span>
+        </div>
+        <div class="card-body">
+          <div class="criteria-list" id="cl-ventas"></div>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-outline" onclick="goToId('s-cliente')">← Anterior</button>
+        <button class="btn btn-primary" onclick="goToId('s-conducta')">Continuar →</button>
+      </div>
+    </div>
+
+    <!-- 6. CONDUCTAS PROHIBIDAS -->
+    <div class="section" id="s-conducta">
+      <div class="card">
+        <div class="card-header">
+          <h2>🚫 Conductas prohibidas</h2>
+          <span class="tag tag-red">Paso 6 de 8</span>
+        </div>
+        <div class="card-body">
+          <div class="alert alert-warn" style="margin-bottom:22px;">
+            <span>⚠️</span>
+            <span>Marque "No cumple" si observa alguna conducta prohibida durante el turno.</span>
+          </div>
+          <div class="criteria-list" id="cl-conducta"></div>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-outline" onclick="goToId('s-ventas')">← Anterior</button>
+        <button class="btn btn-primary" onclick="goToId('s-tarjeta')">Continuar →</button>
+      </div>
+    </div>
+
+    <!-- 7. TARJETA -->
+    <div class="section" id="s-tarjeta">
+      <div class="card">
+        <div class="card-header">
+          <h2>🟡🔴 Tarjeta amarilla / roja</h2>
+          <span class="tag tag-yellow">Paso 7 de 8</span>
+        </div>
+        <div class="card-body">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:26px;">
+            <div style="background:#fffbeb;border:2px solid #fcd34d;border-radius:12px;padding:18px;">
+              <div style="font-weight:700;color:#92400e;margin-bottom:12px;font-size:16px;">🟡 Tarjeta Amarilla</div>
+              <div style="font-size:14px;color:#78350f;line-height:1.6;">Conducta inadecuada que debe corregirse y monitorearse. Primera oportunidad de mejora.</div>
+            </div>
+            <div style="background:#fff5f5;border:2px solid #fc8181;border-radius:12px;padding:18px;">
+              <div style="font-weight:700;color:#9b1c1c;margin-bottom:12px;font-size:16px;">🔴 Tarjeta Roja</div>
+              <div style="font-size:14px;color:#7f1d1d;line-height:1.6;">Falta grave con consecuencias disciplinarias. Contraria a valores del restaurante o la legislación.</div>
+            </div>
+          </div>
+          <div class="criteria-list" id="cl-tarjeta"></div>
+          <div style="margin-top:26px;">
+            <div class="form-group">
+              <label>Descripción del incidente (si aplica)</label>
+              <textarea id="t-incidente" rows="3" placeholder="Describa brevemente el incidente o conducta observada..."></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-outline" onclick="goToId('s-conducta')">← Anterior</button>
+        <button class="btn btn-primary" onclick="goToId('s-plan')">Continuar →</button>
+      </div>
+    </div>
+
+    <!-- 8. PLAN DE ACCIÓN -->
+    <div class="section" id="s-plan">
+      <div class="card">
+        <div class="card-header">
+          <h2>📝 Plan de acción</h2>
+          <span class="tag tag-green">Paso 8 de 8</span>
+        </div>
+        <div class="card-body">
+          <div class="alert alert-info" style="margin-bottom:22px;">
+            <span>💡</span>
+            <span>Defina las acciones correctivas, responsables y plazos de seguimiento para las áreas que no cumplen.</span>
+          </div>
+          <div id="plan-container"></div>
+          <button class="btn btn-outline btn-sm" onclick="addPlanItem()" style="margin-top:10px;">+ Agregar acción</button>
+          <div style="margin-top:26px;display:grid;grid-template-columns:1fr 1fr;gap:18px;">
+            <div class="form-group">
+              <label>Fortalezas observadas</label>
+              <textarea id="t-fortalezas" rows="3" placeholder="Describa las principales fortalezas del garzón..."></textarea>
+            </div>
+            <div class="form-group">
+              <label>Compromiso del colaborador</label>
+              <textarea id="t-compromiso" rows="3" placeholder="Indique el compromiso acordado con el garzón..."></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-outline" onclick="goToId('s-tarjeta')">← Anterior</button>
+        <button class="btn btn-primary" onclick="computeAndShow()">Ver resultado →</button>
+      </div>
+    </div>
+
+    <!-- RESULTADO FINAL -->
+    <div class="section" id="s-resultado">
+      <div class="card" id="result-card">
+        <div class="card-header">
+          <h2>📊 Resultado de la evaluación</h2>
+          <span class="tag tag-blue" id="result-nombre-tag">—</span>
+        </div>
+        <div class="card-body">
+          <div class="summary-grid" id="summary-grid"></div>
+          <div style="text-align:center;margin-bottom:28px;">
+            <span class="result-badge" id="result-badge">—</span>
+          </div>
+          <div id="module-bars"></div>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-success" onclick="exportExcel()">📥 Descargar Excel</button>
+        <button class="btn btn-primary" onclick="saveToHistory()">💾 Guardar en historial</button>
+        <button class="btn btn-outline" onclick="newEval()">🔄 Nueva evaluación</button>
+      </div>
+      <div id="save-alert" style="margin-top:18px;display:none;"></div>
+    </div>
+
+    <!-- HISTORIAL -->
+    <div class="section" id="s-historial">
+      <div class="card">
+        <div class="card-header">
+          <h2>🗂 Historial de evaluaciones</h2>
+        </div>
+        <div class="card-body" style="padding:0;">
+          <div id="history-content"></div>
+        </div>
+      </div>
+      <div class="btn-row" style="margin-top:18px;">
+        <button class="btn btn-success" onclick="exportHistoryExcel()">📥 Exportar historial a Excel</button>
+        <button class="btn btn-danger btn-sm" onclick="clearHistory()">🗑 Limpiar historial</button>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Menú de navegación móvil flotante -->
+<div class="mobile-nav">
+  <button class="mobile-nav-btn" onclick="toggleMobileNav()">☰</button>
+  <div class="mobile-nav-menu" id="mobileNavMenu">
+    <div class="mobile-nav-item" onclick="goToId('s-datos');toggleMobileNav()">
+      <span>1️⃣</span> Datos del evaluado
+    </div>
+    <div class="mobile-nav-item" onclick="goToId('s-imagen');toggleMobileNav()">
+      <span>👔</span> Imagen personal
+    </div>
+    <div class="mobile-nav-item" onclick="goToId('s-plaza');toggleMobileNav()">
+      <span>📋</span> Preparación de plaza
+    </div>
+    <div class="mobile-nav-item" onclick="goToId('s-cliente');toggleMobileNav()">
+      <span>🙋</span> Atención al cliente
+    </div>
+    <div class="mobile-nav-item" onclick="goToId('s-ventas');toggleMobileNav()">
+      <span>💬</span> Asesoría de ventas
+    </div>
+    <div class="mobile-nav-item" onclick="goToId('s-conducta');toggleMobileNav()">
+      <span>🚫</span> Conductas prohibidas
+    </div>
+    <div class="mobile-nav-item" onclick="goToId('s-tarjeta');toggleMobileNav()">
+      <span>🟡</span> Tarjeta amarilla / roja
+    </div>
+    <div class="mobile-nav-item" onclick="goToId('s-plan');toggleMobileNav()">
+      <span>📝</span> Plan de acción
+    </div>
+    <div class="mobile-nav-item" onclick="goToId('s-resultado');toggleMobileNav()">
+      <span>📊</span> Resultado final
+    </div>
+    <div class="mobile-nav-item" onclick="goToId('s-historial');toggleMobileNav()">
+      <span>🗂</span> Historial
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════
+// CONFIGURACIÓN Y DATOS
+// ═══════════════════════════════════════════════════════════════════════
+
+const MODULES = {
+  imagen: {
+    label: 'Imagen personal',
+    items: [
+      'Uniforme limpio, planchado y sin manchas',
+      'Piocha ubicada en el lado contrario al logo',
+      'Zapatos limpios y lustrados',
+      'Cabello arreglado (recogido si corresponde)',
+      'Barba afeitada o bien arreglada',
+      'Manos y uñas limpias y presentables'
+    ]
+  },
+  plaza: {
+    label: 'Preparación de plaza',
+    items: [
+      'iPad operativo y cargado antes del servicio',
+      'Redelcom disponible y funcionando',
+      'Mise en place completa y ordenada',
+      'Mesas correctamente montadas según estándar',
+      'Mesas limpias y desinfectadas',
+      'Descansos ordenados y completos',
+      'Conoce las promociones y cambios del día'
+    ]
+  },
+  cliente: {
+    label: 'Atención al cliente',
+    items: [
+      'Se mantiene visible en su plaza durante el servicio',
+      'Observa y anticipa necesidades del cliente',
+      'No espera que el cliente lo llame repetidamente',
+      'Mantiene contacto visual al conversar',
+      'Escucha activamente sin interrumpir',
+      'Informa oportunamente demoras o contingencias',
+      'Acepta errores con honestidad y actúa rápido'
+    ]
+  },
+  ventas: {
+    label: 'Asesoría de ventas',
+    items: [
+      'Conoce ingredientes y características del menú',
+      'Realiza preguntas para conocer preferencias',
+      'Recomienda sin presionar',
+      'Es honesto cuando desconoce información',
+      'No promete lo que el restaurante no puede cumplir'
+    ]
+  },
+  conducta: {
+    label: 'Conductas prohibidas',
+    items: [
+      'No usa el celular inadecuadamente en el salón',
+      'No da la espalda a los clientes',
+      'No come ni mastica chicle en el salón',
+      'No distrae a la anfitriona',
+      'No muestra emociones negativas frente al cliente',
+      'No dice garabatos ni usa lenguaje vulgar',
+      'No realiza juegos físicos con compañeros',
+      'No ríe estridentemente ni eleva la voz',
+      'No califica negativamente los platos'
+    ]
+  },
+  tarjeta: {
+    label: 'Tarjeta amarilla / roja',
+    items: [
+      'No ha intentado aprovechar económicamente al cliente',
+      'No ha dicho que el restaurante está cerrado antes de hora',
+      'No ha reclamado propinas al cliente',
+      'No ha mentido sobre productos, precios o situaciones',
+      'No ha cometido actos contrarios a la legislación'
+    ]
+  }
+};
+
+// Estado de la aplicación
+const state = {};
+Object.keys(MODULES).forEach(mod => {
+  state[mod] = {};
+  MODULES[mod].items.forEach((_, i) => { state[mod][i] = { val: null, obs: '' }; });
+});
+
+let planItems = [];
+let history = JSON.parse(localStorage.getItem('eval_history') || '[]');
+let deferredPrompt = null;
+
+// ═══════════════════════════════════════════════════════════════════════
+// PWA: REGISTRO DEL SERVICE WORKER
+// ═══════════════════════════════════════════════════════════════════════
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./service-worker.js')
+      .then((registration) => {
+        console.log('✅ Service Worker registrado:', registration.scope);
+
+        // Verificar actualizaciones cada 60 minutos
+        setInterval(() => {
+          registration.update();
+        }, 60 * 60 * 1000);
+      })
+      .catch((error) => {
+        console.error('❌ Error al registrar Service Worker:', error);
+      });
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// PWA: DETECCIÓN DE INSTALACIÓN
+// ═══════════════════════════════════════════════════════════════════════
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+
+  // Mostrar banner de instalación si no está instalada
+  if (!window.matchMedia('(display-mode: standalone)').matches) {
+    const banner = document.getElementById('installBanner');
+    setTimeout(() => {
+      banner.classList.add('show');
+    }, 3000); // Mostrar después de 3 segundos
+  }
+});
+
+document.getElementById('installBtn').addEventListener('click', async () => {
+  if (!deferredPrompt) return;
+
+  deferredPrompt.prompt();
+  const { outcome } = await deferredPrompt.userChoice;
+
+  console.log(`Resultado de instalación: ${outcome}`);
+
+  deferredPrompt = null;
+  document.getElementById('installBanner').classList.remove('show');
+});
+
+document.getElementById('closeBanner').addEventListener('click', () => {
+  document.getElementById('installBanner').classList.remove('show');
+  localStorage.setItem('install_banner_closed', 'true');
+});
+
+// Ocultar banner si ya está instalada o el usuario lo cerró previamente
+window.addEventListener('appinstalled', () => {
+  document.getElementById('installBanner').classList.remove('show');
+  console.log('✅ PWA instalada correctamente');
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+// DETECCIÓN DE ESTADO OFFLINE/ONLINE
+// ═══════════════════════════════════════════════════════════════════════
+
+function updateOnlineStatus() {
+  const offlineIndicator = document.getElementById('offlineIndicator');
+  if (navigator.onLine) {
+    offlineIndicator.classList.remove('show');
+  } else {
+    offlineIndicator.classList.add('show');
+  }
+}
+
+window.addEventListener('online', updateOnlineStatus);
+window.addEventListener('offline', updateOnlineStatus);
+updateOnlineStatus();
+
+// ═══════════════════════════════════════════════════════════════════════
+// RENDERIZADO DE CRITERIOS
+// ═══════════════════════════════════════════════════════════════════════
+
+function renderCriteria(mod, containerId) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = '';
+  MODULES[mod].items.forEach((item, i) => {
+    const row = document.createElement('div');
+    row.className = 'criteria-item';
+    row.innerHTML = `
+      <span class="name">${item}</span>
+      <div class="toggle-group">
+        <button class="toggle-btn cumple" onclick="setVal('${mod}',${i},true,this)">✓ Cumple</button>
+        <button class="toggle-btn no-cumple" onclick="setVal('${mod}',${i},false,this)">✗ No</button>
+      </div>
+      <input class="obs-input" placeholder="Observación (opcional)"
+        oninput="state['${mod}'][${i}].obs=this.value"
+        value="${state[mod][i].obs}">
+    `;
+    // Restaurar estado
+    if (state[mod][i].val === true) row.querySelector('.cumple').classList.add('active');
+    if (state[mod][i].val === false) row.querySelector('.no-cumple').classList.add('active');
+    container.appendChild(row);
+  });
+}
+
+function setVal(mod, i, val, btn) {
+  state[mod][i].val = val;
+  const group = btn.closest('.toggle-group');
+  group.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  updateBadge(mod);
+
+  // Guardar estado automáticamente
+  saveState();
+}
+
+function updateBadge(mod) {
+  const items = Object.values(state[mod]);
+  const answered = items.filter(x => x.val !== null).length;
+  const total = items.length;
+  const badge = document.getElementById(`b-${mod}`);
+  if (!badge) return;
+  badge.textContent = `${answered}/${total}`;
+  const cumple = items.filter(x => x.val === true).length;
+  const pct = answered > 0 ? Math.round(cumple / answered * 100) : 0;
+  badge.className = 'badge ' + (pct >= 75 ? 'done' : '');
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// PLAN DE ACCIÓN
+// ═══════════════════════════════════════════════════════════════════════
+
+function addPlanItem() {
+  const id = Date.now();
+  planItems.push({ id, area: '', accion: '', responsable: '', fecha: '' });
+  renderPlan();
+  saveState();
+}
+
+function removePlanItem(id) {
+  planItems = planItems.filter(p => p.id !== id);
+  renderPlan();
+  saveState();
+}
+
+function renderPlan() {
+  const c = document.getElementById('plan-container');
+  if (planItems.length === 0) {
+    c.innerHTML = '<div class="empty-state" style="padding:28px;"><p>Sin acciones registradas. Haga clic en "+ Agregar acción" para definir compromisos de mejora.</p></div>';
+    return;
+  }
+  c.innerHTML = planItems.map((p, idx) => `
+    <div class="plan-item">
+      <div class="plan-item-header">
+        <span>Acción ${idx + 1}</span>
+        <button class="btn-remove" onclick="removePlanItem(${p.id})">✕</button>
+      </div>
+      <div class="plan-fields">
+        <div class="form-group">
+          <label>Área de mejora</label>
+          <input value="${p.area}" oninput="updatePlan(${p.id},'area',this.value)" placeholder="Ej: Imagen personal">
+        </div>
+        <div class="form-group">
+          <label>Acción correctiva</label>
+          <input value="${p.accion}" oninput="updatePlan(${p.id},'accion',this.value)" placeholder="Describe la acción">
+        </div>
+        <div class="form-group">
+          <label>Fecha compromiso</label>
+          <input type="date" value="${p.fecha}" oninput="updatePlan(${p.id},'fecha',this.value)">
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function updatePlan(id, key, val) {
+  const item = planItems.find(p => p.id === id);
+  if (item) {
+    item[key] = val;
+    saveState();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// CÁLCULO Y RESULTADOS
+// ═══════════════════════════════════════════════════════════════════════
+
+function computeAndShow() {
+  const scores = {};
+  let totalCumple = 0, totalAnswered = 0;
+
+  Object.keys(MODULES).forEach(mod => {
+    const items = Object.values(state[mod]);
+    const answered = items.filter(x => x.val !== null);
+    const cumple = answered.filter(x => x.val === true).length;
+    scores[mod] = answered.length > 0 ? Math.round(cumple / answered.length * 100) : null;
+    totalCumple += cumple;
+    totalAnswered += answered.length;
+  });
+
+  const overall = totalAnswered > 0 ? Math.round(totalCumple / totalAnswered * 100) : 0;
+
+  // Determinar estado
+  let estado, badgeClass, emoji;
+  if (overall >= 80) {
+    estado = 'Aprobado';
+    badgeClass = 'aprobado';
+    emoji = '✅';
+  } else if (overall >= 60) {
+    estado = 'Requiere refuerzo';
+    badgeClass = 'refuerzo';
+    emoji = '⚠️';
+  } else {
+    estado = 'No aprobado';
+    badgeClass = 'no-aprobado';
+    emoji = '❌';
+  }
+
+  // Actualizar UI
+  const nombre = document.getElementById('d-nombre').value || 'Sin nombre';
+  document.getElementById('result-nombre-tag').textContent = nombre;
+
+  const noCumple = totalAnswered - totalCumple;
+  document.getElementById('summary-grid').innerHTML = `
+    <div class="summary-card blue">
+      <div class="label">Criterios evaluados</div>
+      <div class="value">${totalAnswered}</div>
+    </div>
+    <div class="summary-card green">
+      <div class="label">Cumple</div>
+      <div class="value">${totalCumple}</div>
+    </div>
+    <div class="summary-card red">
+      <div class="label">No cumple</div>
+      <div class="value">${noCumple}</div>
+    </div>
+    <div class="summary-card ${overall >= 80 ? 'green' : overall >= 60 ? 'yellow' : 'red'}">
+      <div class="label">% Cumplimiento</div>
+      <div class="value">${overall}%</div>
+    </div>
+  `;
+
+  document.getElementById('result-badge').className = `result-badge ${badgeClass}`;
+  document.getElementById('result-badge').textContent = `${emoji} ${estado}`;
+
+  // Barras por módulo
+  document.getElementById('module-bars').innerHTML = Object.keys(MODULES).map(mod => {
+    const pct = scores[mod];
+    const label = MODULES[mod].label;
+    if (pct === null) return '';
+    const cls = pct >= 80 ? 'fill-green' : pct >= 60 ? 'fill-yellow' : 'fill-red';
+    const chip = pct >= 80 ? 'chip-green' : pct >= 60 ? 'chip-yellow' : 'chip-red';
+    return `
+      <div style="margin-bottom:18px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <span style="font-size:14px;font-weight:600;">${label}</span>
+          <span class="chip ${chip}">${pct}%</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill ${cls}" style="width:${pct}%"></div></div>
+      </div>`;
+  }).join('');
+
+  goToId('s-resultado');
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// EXPORTACIÓN A EXCEL
+// ═══════════════════════════════════════════════════════════════════════
+
+function buildExcelData() {
+  const nombre = document.getElementById('d-nombre').value;
+  const rut = document.getElementById('d-rut').value;
+  const cargo = document.getElementById('d-cargo').value;
+  const local = document.getElementById('d-local').value;
+  const turno = document.getElementById('d-turno').value;
+  const evaluador = document.getElementById('d-evaluador').value;
+  const fecha = document.getElementById('d-fecha').value;
+  const fortalezas = document.getElementById('t-fortalezas').value;
+  const compromiso = document.getElementById('t-compromiso').value;
+  const incidente = document.getElementById('t-incidente').value;
+
+  let totalCumple = 0, totalAnswered = 0;
+  const modScores = {};
+
+  Object.keys(MODULES).forEach(mod => {
+    const items = Object.values(state[mod]);
+    const answered = items.filter(x => x.val !== null);
+    const cumple = answered.filter(x => x.val === true).length;
+    modScores[mod] = answered.length > 0 ? Math.round(cumple / answered.length * 100) : 0;
+    totalCumple += cumple;
+    totalAnswered += answered.length;
+  });
+
+  const overall = totalAnswered > 0 ? Math.round(totalCumple / totalAnswered * 100) : 0;
+  const estado = overall >= 80 ? 'Aprobado' : overall >= 60 ? 'Requiere refuerzo' : 'No aprobado';
+
+  const rows = [];
+  rows.push(['FICHA DE EVALUACIÓN — EL DESDE DE UN GARZÓN']);
+  rows.push(['']);
+  rows.push(['IDENTIFICACIÓN DEL EVALUADO']);
+  rows.push(['Nombre completo', nombre]);
+  rows.push(['RUT', rut]);
+  rows.push(['Cargo', cargo]);
+  rows.push(['Local / Restaurante', local]);
+  rows.push(['Turno', turno]);
+  rows.push(['Evaluador', evaluador]);
+  rows.push(['Fecha de evaluación', fecha]);
+  rows.push(['']);
+  rows.push(['RESULTADOS POR DIMENSIÓN']);
+  rows.push(['Dimensión', '% Cumplimiento', 'Estado']);
+
+  Object.keys(MODULES).forEach(mod => {
+    const pct = modScores[mod];
+    rows.push([MODULES[mod].label, pct + '%', pct >= 80 ? 'Aprobado' : pct >= 60 ? 'Refuerzo' : 'No aprobado']);
+  });
+
+  rows.push(['']);
+  rows.push(['RESULTADO GENERAL', overall + '%', estado]);
+  rows.push(['']);
+  rows.push(['DETALLE DE CRITERIOS EVALUADOS']);
+  rows.push(['Dimensión', 'Criterio', 'Resultado', 'Observación']);
+
+  Object.keys(MODULES).forEach(mod => {
+    MODULES[mod].items.forEach((item, i) => {
+      const v = state[mod][i];
+      rows.push([MODULES[mod].label, item, v.val === true ? 'Cumple' : v.val === false ? 'No cumple' : 'No evaluado', v.obs]);
+    });
+  });
+
+  rows.push(['']);
+  rows.push(['PLAN DE ACCIÓN']);
+  rows.push(['Área de mejora', 'Acción correctiva', 'Fecha compromiso']);
+  planItems.forEach(p => rows.push([p.area, p.accion, p.fecha]));
+  rows.push(['']);
+  rows.push(['OBSERVACIONES']);
+  rows.push(['Fortalezas', fortalezas]);
+  rows.push(['Compromiso del colaborador', compromiso]);
+  if (incidente) rows.push(['Descripción de incidente', incidente]);
+
+  return { rows, nombre, fecha, overall, estado, rut, cargo, local, turno, evaluador, modScores };
+}
+
+function exportExcel() {
+  const { rows, nombre, fecha } = buildExcelData();
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [{ wch: 30 }, { wch: 50 }, { wch: 20 }, { wch: 40 }];
+  XLSX.utils.book_append_sheet(wb, ws, 'Ficha Evaluación');
+  const fileName = `Evaluacion_${(nombre || 'Garzon').replace(/\s+/g, '_')}_${fecha || 'sin_fecha'}.xlsx`;
+  XLSX.writeFile(wb, fileName);
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// HISTORIAL
+// ═══════════════════════════════════════════════════════════════════════
+
+function saveToHistory() {
+  const { rows, nombre, fecha, overall, estado, rut, cargo, local, turno, evaluador } = buildExcelData();
+  const record = { nombre, rut, cargo, local, turno, evaluador, fecha, overall, estado, timestamp: Date.now() };
+  history.push(record);
+  localStorage.setItem('eval_history', JSON.stringify(history));
+
+  const el = document.getElementById('save-alert');
+  el.style.display = 'block';
+  el.innerHTML = `<div class="alert alert-success">✅ Evaluación de <strong>${nombre}</strong> guardada en el historial.</div>`;
+  setTimeout(() => { el.style.display = 'none'; }, 4000);
+}
+
+function renderHistory() {
+  const c = document.getElementById('history-content');
+  if (history.length === 0) {
+    c.innerHTML = `<div class="empty-state"><div class="icon">🗂</div><p>No hay evaluaciones guardadas aún.</p></div>`;
+    return;
+  }
+
+  const sorted = [...history].sort((a, b) => b.timestamp - a.timestamp);
+  c.innerHTML = `
+    <table class="history-table">
+      <thead>
+        <tr>
+          <th>Garzón</th><th>RUT</th><th>Cargo</th><th>Local</th>
+          <th>Fecha</th><th>Evaluador</th><th>Cumplimiento</th><th>Estado</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${sorted.map(r => {
+          const chip = r.overall >= 80 ? 'chip-green' : r.overall >= 60 ? 'chip-yellow' : 'chip-red';
+          return `<tr>
+            <td><strong>${r.nombre}</strong></td>
+            <td>${r.rut}</td>
+            <td>${r.cargo}</td>
+            <td>${r.local}</td>
+            <td>${r.fecha}</td>
+            <td>${r.evaluador}</td>
+            <td><span class="chip ${chip}">${r.overall}%</span></td>
+            <td>${r.estado}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
+}
+
+function exportHistoryExcel() {
+  const wb = XLSX.utils.book_new();
+  const headers = ['Garzón', 'RUT', 'Cargo', 'Local', 'Turno', 'Evaluador', 'Fecha', '% Cumplimiento', 'Estado'];
+  const rows = [headers, ...history.map(r => [r.nombre, r.rut, r.cargo, r.local, r.turno || '', r.evaluador, r.fecha, r.overall + '%', r.estado])];
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = headers.map(() => ({ wch: 20 }));
+  XLSX.utils.book_append_sheet(wb, ws, 'Historial');
+  XLSX.writeFile(wb, `Historial_Evaluaciones_${new Date().toISOString().split('T')[0]}.xlsx`);
+}
+
+function clearHistory() {
+  if (confirm('¿Eliminar todo el historial de evaluaciones?')) {
+    history = [];
+    localStorage.setItem('eval_history', '[]');
+    renderHistory();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// NAVEGACIÓN
+// ═══════════════════════════════════════════════════════════════════════
+
+function goTo(sectionId, navEl) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById(sectionId).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  if (navEl) navEl.classList.add('active');
+  if (sectionId === 's-historial') renderHistory();
+  window.scrollTo(0, 0);
+}
+
+function goToId(sectionId) {
+  const navMap = {
+    's-datos': 0, 's-imagen': 1, 's-plaza': 2, 's-cliente': 3,
+    's-ventas': 4, 's-conducta': 5, 's-tarjeta': 6,
+    's-plan': 7, 's-resultado': 8, 's-historial': 9
+  };
+  const navItems = document.querySelectorAll('.nav-item');
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById(sectionId).classList.add('active');
+  navItems.forEach(n => n.classList.remove('active'));
+  if (navMap[sectionId] !== undefined && navItems[navMap[sectionId]])
+    navItems[navMap[sectionId]].classList.add('active');
+  if (sectionId === 's-historial') renderHistory();
+  window.scrollTo(0, 0);
+}
+
+function toggleMobileNav() {
+  const menu = document.getElementById('mobileNavMenu');
+  menu.classList.toggle('show');
+}
+
+function newEval() {
+  if (!confirm('¿Iniciar una nueva evaluación? Los datos actuales no guardados se perderán.')) return;
+
+  Object.keys(MODULES).forEach(mod => {
+    state[mod] = {};
+    MODULES[mod].items.forEach((_, i) => { state[mod][i] = { val: null, obs: '' }; });
+  });
+
+  planItems = [];
+  ['d-nombre','d-rut','d-local','d-evaluador'].forEach(id => document.getElementById(id).value = '');
+  ['t-fortalezas','t-compromiso','t-incidente'].forEach(id => document.getElementById(id).value = '');
+
+  renderAllCriteria();
+  renderPlan();
+  clearState();
+  goToId('s-datos');
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// GUARDADO AUTOMÁTICO DE ESTADO (OFFLINE)
+// ═══════════════════════════════════════════════════════════════════════
+
+function saveState() {
+  const currentState = {
+    state,
+    planItems,
+    formData: {
+      nombre: document.getElementById('d-nombre').value,
+      rut: document.getElementById('d-rut').value,
+      cargo: document.getElementById('d-cargo').value,
+      local: document.getElementById('d-local').value,
+      turno: document.getElementById('d-turno').value,
+      evaluador: document.getElementById('d-evaluador').value,
+      fecha: document.getElementById('d-fecha').value,
+      fortalezas: document.getElementById('t-fortalezas').value,
+      compromiso: document.getElementById('t-compromiso').value,
+      incidente: document.getElementById('t-incidente').value
+    },
+    timestamp: Date.now()
+  };
+  localStorage.setItem('current_eval_state', JSON.stringify(currentState));
+}
+
+function loadState() {
+  const savedState = localStorage.getItem('current_eval_state');
+  if (!savedState) return;
+
+  try {
+    const data = JSON.parse(savedState);
+
+    // Restaurar estado de criterios
+    Object.keys(data.state).forEach(mod => {
+      Object.keys(data.state[mod]).forEach(i => {
+        state[mod][i] = data.state[mod][i];
+      });
+    });
+
+    // Restaurar plan de acción
+    planItems = data.planItems || [];
+
+    // Restaurar formularios
+    if (data.formData) {
+      Object.keys(data.formData).forEach(key => {
+        const el = document.getElementById(`d-${key}`) || document.getElementById(`t-${key}`);
+        if (el) el.value = data.formData[key];
+      });
+    }
+
+    console.log('✅ Estado restaurado desde localStorage');
+  } catch (error) {
+    console.error('❌ Error al restaurar estado:', error);
+  }
+}
+
+function clearState() {
+  localStorage.removeItem('current_eval_state');
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// INICIALIZACIÓN
+// ═══════════════════════════════════════════════════════════════════════
+
+function renderAllCriteria() {
+  renderCriteria('imagen', 'cl-imagen');
+  renderCriteria('plaza', 'cl-plaza');
+  renderCriteria('cliente', 'cl-cliente');
+  renderCriteria('ventas', 'cl-ventas');
+  renderCriteria('conducta', 'cl-conducta');
+  renderCriteria('tarjeta', 'cl-tarjeta');
+}
+
+// Agregar listeners de guardado automático a todos los inputs
+document.addEventListener('DOMContentLoaded', () => {
+  // Establecer fecha actual por defecto
+  document.getElementById('d-fecha').value = new Date().toISOString().split('T')[0];
+
+  // Cargar estado guardado
+  loadState();
+
+  // Renderizar interfaz
+  renderAllCriteria();
+  renderPlan();
+  Object.keys(MODULES).forEach(mod => updateBadge(mod));
+
+  // Agregar listeners de guardado automático
+  document.querySelectorAll('input, select, textarea').forEach(el => {
+    if (el.id && (el.id.startsWith('d-') || el.id.startsWith('t-'))) {
+      el.addEventListener('input', saveState);
+      el.addEventListener('change', saveState);
+    }
+  });
+
+  console.log('✅ Aplicación inicializada correctamente');
+});
+
+// Cerrar menú móvil al hacer clic fuera
+document.addEventListener('click', (e) => {
+  const mobileNav = document.querySelector('.mobile-nav');
+  const menu = document.getElementById('mobileNavMenu');
+  if (mobileNav && !mobileNav.contains(e.target) && menu.classList.contains('show')) {
+    menu.classList.remove('show');
+  }
+});
+</script>
+</body>
+</html>

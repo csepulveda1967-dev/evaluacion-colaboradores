@@ -1,0 +1,205 @@
+═══════════════════════════════════════════════════════════════════════
+  📱 GUÍA DE INICIO RÁPIDO - EVALUACIÓN DE GARZONES PWA
+═══════════════════════════════════════════════════════════════════════
+
+✨ APLICACIÓN LISTA PARA USAR EN TABLETS ANDROID ✨
+
+═══════════════════════════════════════════════════════════════════════
+  📦 PASO 1: CREAR LOS ICONOS (OBLIGATORIO)
+═══════════════════════════════════════════════════════════════════════
+
+⚠️ La aplicación NO funcionará correctamente sin los iconos ⚠️
+
+OPCIÓN MÁS FÁCIL:
+
+1. Ve a esta página web: https://www.pwabuilder.com/imageGenerator
+
+2. Sube UNA imagen cuadrada (puede ser el logo del restaurante)
+   - Tamaño recomendado: 512x512 píxeles
+   - Formato: PNG o JPG
+
+3. Descarga el archivo ZIP con todos los tamaños
+
+4. Extrae los archivos PNG y ponlos en esta carpeta:
+   C:\Users\NIÑOS\Documents\capacitacion\evaluacion-supervisor-pwa\icons\
+
+5. Los archivos deben llamarse EXACTAMENTE así:
+   ✓ icon-72x72.png
+   ✓ icon-96x96.png
+   ✓ icon-128x128.png
+   ✓ icon-144x144.png
+   ✓ icon-152x152.png
+   ✓ icon-192x192.png
+   ✓ icon-384x384.png
+   ✓ icon-512x512.png
+
+═══════════════════════════════════════════════════════════════════════
+  🌐 PASO 2: SUBIR A INTERNET (ELIGE UNA OPCIÓN)
+═══════════════════════════════════════════════════════════════════════
+
+┌─────────────────────────────────────────────────────────────────────┐
+│ OPCIÓN A: GitHub Pages (GRATIS - RECOMENDADO)                      │
+└─────────────────────────────────────────────────────────────────────┘
+
+1. Crea cuenta gratuita en: https://github.com
+
+2. Crea un repositorio nuevo:
+   - Nombre: evaluacion-garzones
+   - Público
+   - Sin README
+
+3. Sube TODOS estos archivos:
+   ✓ index.html
+   ✓ manifest.json
+   ✓ service-worker.js
+   ✓ README.md
+   ✓ Carpeta icons/ (con todos los PNG adentro)
+
+4. Configura GitHub Pages:
+   - Ve a Settings → Pages
+   - Branch: main
+   - Carpeta: / (root)
+   - Guarda
+
+5. ESPERA 2-3 minutos y tu app estará en:
+   https://TU-USUARIO.github.io/evaluacion-garzones/
+
+┌─────────────────────────────────────────────────────────────────────┐
+│ OPCIÓN B: Servidor Web Propio                                      │
+└─────────────────────────────────────────────────────────────────────┘
+
+Si tienes hosting web:
+1. Sube todos los archivos por FTP a tu servidor
+2. Asegúrate de que tu servidor tenga HTTPS activado
+3. Accede a la URL donde los subiste
+
+┌─────────────────────────────────────────────────────────────────────┐
+│ OPCIÓN C: Prueba Local (SOLO PARA PROBAR EN TU RED)                │
+└─────────────────────────────────────────────────────────────────────┘
+
+⚠️ No funciona para instalar la app, solo para probar
+
+1. Abre PowerShell en la carpeta de la app
+
+2. Ejecuta:
+   python -m http.server 8000
+
+3. Desde la tablet, accede a:
+   http://[IP-DE-TU-PC]:8000
+
+   (Para saber tu IP: abre CMD y escribe "ipconfig")
+
+═══════════════════════════════════════════════════════════════════════
+  📱 PASO 3: INSTALAR EN LA TABLET
+═══════════════════════════════════════════════════════════════════════
+
+1. Abre CHROME en tu tablet Android (importante: debe ser Chrome)
+
+2. Ve a la URL de tu aplicación (la que obtuviste en el Paso 2)
+
+3. Después de 3 segundos aparecerá un BANNER AZUL abajo:
+   "📱 Instalar aplicación"
+
+   Toca "Instalar" → Confirma
+
+   ¿No aparece el banner?
+   - Toca los 3 puntos en Chrome (⋮)
+   - Busca "Instalar aplicación" o "Añadir a pantalla de inicio"
+   - Toca ahí y confirma
+
+4. ¡LISTO! La app aparecerá en tu pantalla de inicio como "Eval Garzones"
+
+═══════════════════════════════════════════════════════════════════════
+  ✅ VERIFICAR QUE FUNCIONA CORRECTAMENTE
+═══════════════════════════════════════════════════════════════════════
+
+Prueba estos pasos:
+
+[✓] La app abre sin mostrar la barra de Chrome
+[✓] Puedes completar una evaluación
+[✓] Al tocar "💾 Guardar", aparece mensaje de confirmación
+[✓] En "Historial" ves la evaluación guardada
+[✓] Puedes exportar a Excel (se descarga el archivo)
+[✓] DESACTIVA EL WIFI → La app sigue funcionando
+[✓] Cierra la app y vuelve a abrirla → Los datos siguen ahí
+
+═══════════════════════════════════════════════════════════════════════
+  💡 CONSEJOS IMPORTANTES
+═══════════════════════════════════════════════════════════════════════
+
+✅ SIEMPRE guarda en historial antes de cerrar la app
+✅ Exporta el historial a Excel regularmente (como respaldo)
+✅ Los datos se guardan SOLO en esa tablet (no se sincronizan)
+✅ Si desinstalas Chrome o borras sus datos, pierdes las evaluaciones
+✅ La app funciona 100% offline después de la primera carga
+
+═══════════════════════════════════════════════════════════════════════
+  🆘 PROBLEMAS COMUNES
+═══════════════════════════════════════════════════════════════════════
+
+❌ "No aparece el botón Instalar"
+   → Verifica que la URL empiece con HTTPS
+   → GitHub Pages tiene HTTPS automático
+
+❌ "Los datos desaparecen"
+   → Usa el botón "💾 Guardar en historial"
+   → No borres los datos de Chrome
+
+❌ "No funciona sin internet"
+   → Con internet, abre la app y navega todas las secciones
+   → Espera que todo cargue completamente
+   → Ahora prueba sin internet
+
+❌ "Se ve mal en la tablet"
+   → En Chrome: Configuración → Accesibilidad
+   → Ajusta "Escala de texto" a 100%
+
+═══════════════════════════════════════════════════════════════════════
+  📞 CONTACTO Y AYUDA
+═══════════════════════════════════════════════════════════════════════
+
+¿Necesitas más ayuda?
+
+1. Lee el archivo README.md (tiene más detalles técnicos)
+2. Verifica que seguiste TODOS los pasos en orden
+3. Asegúrate de tener Chrome actualizado en la tablet
+
+═══════════════════════════════════════════════════════════════════════
+  📁 ARCHIVOS DE LA APLICACIÓN
+═══════════════════════════════════════════════════════════════════════
+
+Carpeta: C:\Users\NIÑOS\Documents\capacitacion\evaluacion-supervisor-pwa\
+
+Archivos que DEBES subir al servidor:
+├── index.html              ← Aplicación principal
+├── manifest.json           ← Configuración PWA
+├── service-worker.js       ← Funcionamiento offline
+└── icons/                  ← Carpeta con los 8 iconos PNG
+    ├── icon-72x72.png
+    ├── icon-96x96.png
+    ├── icon-128x128.png
+    ├── icon-144x144.png
+    ├── icon-152x152.png
+    ├── icon-192x192.png
+    ├── icon-384x384.png
+    └── icon-512x512.png
+
+Archivos informativos (opcional subirlos):
+├── README.md               ← Documentación completa
+└── INICIO-RAPIDO.txt       ← Este archivo
+
+═══════════════════════════════════════════════════════════════════════
+
+🎉 ¡Listo! En menos de 15 minutos tendrás tu app funcionando en tablets.
+
+Si todo salió bien, deberías poder:
+• Abrir la app desde el ícono en la tablet
+• Crear evaluaciones con o sin internet
+• Guardar en historial local
+• Exportar a Excel
+• Trabajar completamente offline
+
+═══════════════════════════════════════════════════════════════════════
+Última actualización: 06/10/2026
+Versión: 1.0.0
+═══════════════════════════════════════════════════════════════════════
