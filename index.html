@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -18,7 +18,7 @@
 <link rel="apple-touch-icon" href="./icons/icon-192x192.png">
 
 <!-- Biblioteca Excel -->
-<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+
 
 <style>
 :root{
@@ -499,7 +499,7 @@ body {
 
 .plan-fields {
   display:grid;
-  grid-template-columns:1fr 1fr 160px;
+  grid-template-columns:1fr 1fr 1fr 160px;
   gap:12px;
 }
 
@@ -812,7 +812,7 @@ body {
   border-radius: 10px;
   cursor: pointer;
   font-size: 15px;
-  color: var(--gray-700);
+  color: var(--gray-600);
   transition: background 0.15s;
 }
 
@@ -853,10 +853,11 @@ body {
 <!-- Header -->
 <div class="app-header">
   <div>
-    <h1>🍽 Evaluación de Garzones</h1>
+    <h1 id="brandTitle">🍽 Evaluación de Garzones</h1>
     <span>El Desde de un Garzón — Panel del Supervisor</span>
   </div>
   <div class="app-header-actions">
+    <button class="header-btn" onclick="editBrand()" title="Empresa y color">⚙️</button>
     <button class="header-btn" onclick="location.reload()" title="Actualizar">
       <span>🔄</span>
     </button>
@@ -1332,7 +1333,7 @@ window.addEventListener('beforeinstallprompt', (e) => {
   deferredPrompt = e;
 
   // Mostrar banner de instalación si no está instalada
-  if (!window.matchMedia('(display-mode: standalone)').matches) {
+  if (!window.matchMedia('(display-mode: standalone)').matches && !localStorage.getItem('install_banner_closed')) {
     const banner = document.getElementById('installBanner');
     setTimeout(() => {
       banner.classList.add('show');
@@ -1398,7 +1399,7 @@ function renderCriteria(mod, containerId) {
       </div>
       <input class="obs-input" placeholder="Observación (opcional)"
         oninput="state['${mod}'][${i}].obs=this.value"
-        value="${state[mod][i].obs}">
+        value="${esc(state[mod][i].obs)}">
     `;
     // Restaurar estado
     if (state[mod][i].val === true) row.querySelector('.cumple').classList.add('active');
@@ -1462,11 +1463,11 @@ function renderPlan() {
       <div class="plan-fields">
         <div class="form-group">
           <label>Área de mejora</label>
-          <input value="${p.area}" oninput="updatePlan(${p.id},'area',this.value)" placeholder="Ej: Imagen personal">
+          <input value="${esc(p.area)}" oninput="updatePlan(${p.id},'area',this.value)" placeholder="Ej: Imagen personal">
         </div>
         <div class="form-group">
           <label>Acción correctiva</label>
-          <input value="${p.accion}" oninput="updatePlan(${p.id},'accion',this.value)" placeholder="Describe la acción">
+          <input value="${esc(p.accion)}" oninput="updatePlan(${p.id},'accion',this.value)" placeholder="Describe la acción"></div><div class="form-group"><label>Responsable</label><input value="${esc(p.responsable)}" oninput="updatePlan(${p.id},'responsable',this.value)" placeholder="Quién ejecuta">
         </div>
         <div class="form-group">
           <label>Fecha compromiso</label>
@@ -1490,6 +1491,7 @@ function updatePlan(id, key, val) {
 // ═══════════════════════════════════════════════════════════════════════
 
 function computeAndShow() {
+  if (!validar()) return;
   const scores = {};
   let totalCumple = 0, totalAnswered = 0;
 
@@ -1506,7 +1508,11 @@ function computeAndShow() {
 
   // Determinar estado
   let estado, badgeClass, emoji;
-  if (overall >= 80) {
+  if (faltaGrave()) {
+    estado = 'Falta grave (tarjeta)';
+    badgeClass = 'no-aprobado';
+    emoji = '🔴';
+  } else if (overall >= 80) {
     estado = 'Aprobado';
     badgeClass = 'aprobado';
     emoji = '✅';
@@ -1596,10 +1602,10 @@ function buildExcelData() {
   });
 
   const overall = totalAnswered > 0 ? Math.round(totalCumple / totalAnswered * 100) : 0;
-  const estado = overall >= 80 ? 'Aprobado' : overall >= 60 ? 'Requiere refuerzo' : 'No aprobado';
+  const estado = faltaGrave() ? 'Falta grave (tarjeta)' : overall >= 80 ? 'Aprobado' : overall >= 60 ? 'Requiere refuerzo' : 'No aprobado';
 
   const rows = [];
-  rows.push(['FICHA DE EVALUACIÓN — EL DESDE DE UN GARZÓN']);
+  rows.push(['FICHA DE EVALUACIÓN — ' + (brand.name || 'EL DESDE DE UN GARZÓN').toUpperCase()]);
   rows.push(['']);
   rows.push(['IDENTIFICACIÓN DEL EVALUADO']);
   rows.push(['Nombre completo', nombre]);
@@ -1633,8 +1639,8 @@ function buildExcelData() {
 
   rows.push(['']);
   rows.push(['PLAN DE ACCIÓN']);
-  rows.push(['Área de mejora', 'Acción correctiva', 'Fecha compromiso']);
-  planItems.forEach(p => rows.push([p.area, p.accion, p.fecha]));
+  rows.push(['Área de mejora', 'Acción correctiva', 'Responsable', 'Fecha compromiso']);
+  planItems.forEach(p => rows.push([p.area, p.accion, p.responsable || '', p.fecha]));
   rows.push(['']);
   rows.push(['OBSERVACIONES']);
   rows.push(['Fortalezas', fortalezas]);
@@ -1644,52 +1650,43 @@ function buildExcelData() {
   return { rows, nombre, fecha, overall, estado, rut, cargo, local, turno, evaluador, modScores };
 }
 
-function exportExcel() {
-  try {
-    const { rows, nombre, fecha } = buildExcelData();
-
-    // Convertir array de datos a CSV
-    let csvContent = '﻿'; // BOM para que Excel reconozca UTF-8
-
-    rows.forEach(row => {
-      // Procesar cada celda
-      const processedRow = row.map(cell => {
-        // Si la celda tiene comas, comillas o saltos de línea, encerrarla entre comillas
-        let cellStr = String(cell || '');
-        if (cellStr.includes(',') || cellStr.includes('"') || cellStr.includes('\n')) {
-          cellStr = '"' + cellStr.replace(/"/g, '""') + '"';
-        }
-        return cellStr;
-      });
-
-      csvContent += processedRow.join(',') + '\n';
-    });
-
-    // Crear blob y descargar
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-
-    if (navigator.msSaveBlob) { // Para IE 10+
-      navigator.msSaveBlob(blob, `Evaluacion_${(nombre || 'Garzon').replace(/\s+/g, '_')}_${fecha || 'sin_fecha'}.csv`);
-    } else {
-      link.href = URL.createObjectURL(blob);
-      link.download = `Evaluacion_${(nombre || 'Garzon').replace(/\s+/g, '_')}_${fecha || 'sin_fecha'}.csv`;
-      link.style.display = 'none';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      // Limpiar el objeto URL después de un momento
-      setTimeout(() => URL.revokeObjectURL(link.href), 100);
-    }
-
-    // Mostrar confirmación
-    alert('✅ Archivo descargado correctamente\n\nSe descargó como CSV. Excel lo abrirá sin problema.');
-  } catch (error) {
-    console.error('Error al exportar:', error);
-    alert('❌ Error al descargar: ' + error.message);
-  }
-}
+/*XLSX-START*/
+function crc32(b){let t=crc32.t,c,r=-1;if(!t){t=crc32.t=[];for(let n=0;n<256;n++){c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0;}}for(let i=0;i<b.length;i++)r=t[(r^b[i])&255]^(r>>>8);return(r^-1)>>>0;}
+function zip(files){const E=new TextEncoder(),P=[],C=[],u16=v=>[v&255,v>>8&255],u32=v=>[v&255,v>>8&255,v>>16&255,v>>>24&255];let off=0,cs=0;
+files.forEach(f=>{const n=E.encode(f.name),d=f.data,c=crc32(d);
+const h=new Uint8Array([0x50,0x4b,3,4,20,0,0,0,0,0,0,0,33,0,...u32(c),...u32(d.length),...u32(d.length),...u16(n.length),0,0]);
+const k=new Uint8Array([0x50,0x4b,1,2,20,0,20,0,0,0,0,0,0,0,33,0,...u32(c),...u32(d.length),...u32(d.length),...u16(n.length),0,0,0,0,0,0,0,0,0,0,0,0,...u32(off)]);
+P.push(h,n,d);C.push(k,n);off+=h.length+n.length+d.length;cs+=k.length+n.length;});
+const e=new Uint8Array([0x50,0x4b,5,6,0,0,0,0,...u16(files.length),...u16(files.length),...u32(cs),...u32(off),0,0]);
+return new Blob([...P,...C,e],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});}
+function xe(v){return String(v==null?'':v).replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function colL(n){let s='';n++;while(n){const m=(n-1)%26;s=String.fromCharCode(65+m)+s;n=Math.floor((n-1)/26);}return s;}
+function sheetXml(sh){const rows=sh.rows.map((r,ri)=>{const sec=r.length===1&&r[0]&&String(r[0])===String(r[0]).toUpperCase();
+return '<row r="'+(ri+1)+'">'+r.map((v,ci)=>{const st=(sh.hdr&&ri===0)||sec?1:(sh.b1&&ci===0?2:0),ref=colL(ci)+(ri+1);
+return typeof v==='number'?'<c r="'+ref+'" s="'+st+'"><v>'+v+'</v></c>':'<c r="'+ref+'" s="'+st+'" t="inlineStr"><is><t xml:space="preserve">'+xe(v)+'</t></is></c>';}).join('')+'</row>';}).join('');
+return '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'+(sh.hdr?'<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>':'')+(sh.w&&sh.w.length?'<cols>'+sh.w.map((w,i)=>'<col min="'+(i+1)+'" max="'+(i+1)+'" width="'+w+'" customWidth="1"/>').join('')+'</cols>':'')+'<sheetData>'+rows+'</sheetData></worksheet>';}
+function downloadXlsx(sheets,name){const E=new TextEncoder(),X='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>',M='http://schemas.openxmlformats.org/spreadsheetml/2006/main',O='http://schemas.openxmlformats.org/officeDocument/2006/',RL='http://schemas.openxmlformats.org/package/2006/relationships';
+const f=(n,t)=>({name:n,data:E.encode(X+t)}),ct='application/vnd.openxmlformats-officedocument.spreadsheetml.';
+const files=[f('[Content_Types].xml','<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="'+ct+'sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="'+ct+'styles+xml"/>'+sheets.map((_,i)=>'<Override PartName="/xl/worksheets/sheet'+(i+1)+'.xml" ContentType="'+ct+'worksheet+xml"/>').join('')+'</Types>'),
+f('_rels/.rels','<Relationships xmlns="'+RL+'"><Relationship Id="rId1" Type="'+O+'relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>'),
+f('xl/workbook.xml','<workbook xmlns="'+M+'" xmlns:r="'+O+'relationships"><sheets>'+sheets.map((s,i)=>'<sheet name="'+xe(s.name)+'" sheetId="'+(i+1)+'" r:id="rId'+(i+1)+'"/>').join('')+'</sheets></workbook>'),
+f('xl/_rels/workbook.xml.rels','<Relationships xmlns="'+RL+'">'+sheets.map((_,i)=>'<Relationship Id="rId'+(i+1)+'" Type="'+O+'relationships/worksheet" Target="worksheets/sheet'+(i+1)+'.xml"/>').join('')+'<Relationship Id="rId'+(sheets.length+1)+'" Type="'+O+'relationships/styles" Target="styles.xml"/></Relationships>'),
+f('xl/styles.xml','<styleSheet xmlns="'+M+'"><fonts count="3"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF2C5282"/></patternFill></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="3"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/><xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/></cellXfs></styleSheet>')];
+sheets.forEach((s,i)=>files.push(f('xl/worksheets/sheet'+(i+1)+'.xml',sheetXml(s))));
+saveBlob(zip(files),name);}
+/*XLSX-END*/
+function saveBlob(blob,name){const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=name;a.style.display='none';document.body.appendChild(a);a.click();setTimeout(()=>{a.remove();URL.revokeObjectURL(u);},60000);}
+function toast(m){const t=document.createElement('div');t.textContent=m;t.style.cssText='position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#1f2937;color:#fff;padding:14px 22px;border-radius:10px;z-index:2000;font-size:15px';document.body.appendChild(t);setTimeout(()=>t.remove(),3500);}
+function esc(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+let brand=JSON.parse(localStorage.getItem('brand')||'{}');
+function applyBrand(){if(brand.color)document.documentElement.style.setProperty('--blue',brand.color);const n=brand.name||'';document.getElementById('brandTitle').textContent='🍽 Evaluación de Desempeño'+(n?' — '+n:'');document.title=n?'Evaluación — '+n:'Evaluación de Desempeño';}
+function editBrand(){const n=prompt('Nombre de la empresa o local:',brand.name||'');if(n===null)return;const c=prompt('Color corporativo (ej: #2c5282):',brand.color||'#2c5282');brand={name:n.trim(),color:/^#[0-9a-f]{6}$/i.test(c||'')?c:(brand.color||'')};localStorage.setItem('brand',JSON.stringify(brand));applyBrand();}
+function faltaGrave(){return Object.values(state.tarjeta).some(x=>x.val===false);}
+function validar(){const n=document.getElementById('d-nombre').value.trim(),e=document.getElementById('d-evaluador').value.trim();
+if(!n||!e){alert('⚠️ Complete el nombre del evaluado y del evaluador.');goToId('s-datos');return false;}
+let pend=0;Object.keys(MODULES).forEach(m=>Object.values(state[m]).forEach(x=>{if(x.val===null)pend++;}));
+return pend===0||confirm('Quedan '+pend+' criterios sin evaluar. ¿Ver el resultado igualmente?');}
+function exportExcel(){try{const d=buildExcelData();downloadXlsx([{name:'Evaluación',rows:d.rows,w:[34,60,18,40],b1:true}],'Evaluacion_'+(d.nombre||'Garzon').trim().replace(/\s+/g,'_')+'_'+(d.fecha||'sin_fecha')+'.xlsx');toast('✅ Excel descargado');}catch(e){console.error(e);alert('❌ Error al generar Excel: '+e.message);}}
 
 // ═══════════════════════════════════════════════════════════════════════
 // HISTORIAL
@@ -1703,7 +1700,8 @@ function saveToHistory() {
       return;
     }
 
-    const { rows, nombre, fecha, overall, estado, rut, cargo, local, turno, evaluador } = buildExcelData();
+    const { rows, nombre, fecha, overall, estado, rut, cargo, local, turno, evaluador, modScores } = buildExcelData();
+    const det = []; Object.keys(MODULES).forEach(m => MODULES[m].items.forEach((it, i) => { const v = state[m][i]; det.push([MODULES[m].label, it, v.val === true ? 'Cumple' : v.val === false ? 'No cumple' : 'No evaluado', v.obs]); }));
 
     // Validar datos mínimos
     if (!nombre || nombre.trim() === '') {
@@ -1711,7 +1709,7 @@ function saveToHistory() {
       return;
     }
 
-    const record = { nombre, rut, cargo, local, turno, evaluador, fecha, overall, estado, timestamp: Date.now() };
+    const record = { nombre, rut, cargo, local, turno, evaluador, fecha, overall, estado, mods: modScores, det, rows, timestamp: Date.now() };
     history.push(record);
 
     // Intentar guardar en localStorage
@@ -1719,7 +1717,7 @@ function saveToHistory() {
 
     const el = document.getElementById('save-alert');
     el.style.display = 'block';
-    el.innerHTML = `<div class="alert alert-success">✅ Evaluación de <strong>${nombre}</strong> guardada en el historial.</div>`;
+    el.innerHTML = `<div class="alert alert-success">✅ Evaluación de <strong>${esc(nombre)}</strong> guardada en el historial.</div>`;
     setTimeout(() => { el.style.display = 'none'; }, 4000);
 
     console.log('✅ Guardado exitoso. Total evaluaciones:', history.length);
@@ -1742,79 +1740,45 @@ function renderHistory() {
     return;
   }
 
-  const sorted = [...history].sort((a, b) => b.timestamp - a.timestamp);
+  const sorted = history.map((r, ix) => ({...r, ix})).sort((a, b) => b.timestamp - a.timestamp);
   c.innerHTML = `
-    <table class="history-table">
+    <div style="overflow-x:auto"><table class="history-table">
       <thead>
         <tr>
           <th>Garzón</th><th>RUT</th><th>Cargo</th><th>Local</th>
-          <th>Fecha</th><th>Evaluador</th><th>Cumplimiento</th><th>Estado</th>
+          <th>Fecha</th><th>Evaluador</th><th>Cumplimiento</th><th>Estado</th><th></th>
         </tr>
       </thead>
       <tbody>
         ${sorted.map(r => {
           const chip = r.overall >= 80 ? 'chip-green' : r.overall >= 60 ? 'chip-yellow' : 'chip-red';
           return `<tr>
-            <td><strong>${r.nombre}</strong></td>
-            <td>${r.rut}</td>
-            <td>${r.cargo}</td>
-            <td>${r.local}</td>
-            <td>${r.fecha}</td>
-            <td>${r.evaluador}</td>
+            <td><strong>${esc(r.nombre)}</strong></td>
+            <td>${esc(r.rut)}</td>
+            <td>${esc(r.cargo)}</td>
+            <td>${esc(r.local)}</td>
+            <td>${esc(r.fecha)}</td>
+            <td>${esc(r.evaluador)}</td>
             <td><span class="chip ${chip}">${r.overall}%</span></td>
-            <td>${r.estado}</td>
+            <td>${esc(r.estado)}</td><td style="white-space:nowrap"><button class="btn btn-outline btn-sm" onclick="downloadRecord(${r.ix})">📥</button> <button class="btn-remove" style="display:inline-flex" onclick="deleteRecord(${r.ix})">✕</button></td>
           </tr>`;
         }).join('')}
       </tbody>
-    </table>`;
+    </table></div>`;
 }
 
-function exportHistoryExcel() {
-  try {
-    if (history.length === 0) {
-      alert('⚠️ No hay evaluaciones en el historial para exportar.');
-      return;
-    }
-
-    const headers = ['Garzón', 'RUT', 'Cargo', 'Local', 'Turno', 'Evaluador', 'Fecha', '% Cumplimiento', 'Estado'];
-    const rows = [headers, ...history.map(r => [r.nombre, r.rut, r.cargo, r.local, r.turno || '', r.evaluador, r.fecha, r.overall + '%', r.estado])];
-
-    // Convertir a CSV
-    let csvContent = '﻿'; // BOM para UTF-8
-    rows.forEach(row => {
-      const processedRow = row.map(cell => {
-        let cellStr = String(cell || '');
-        if (cellStr.includes(',') || cellStr.includes('"') || cellStr.includes('\n')) {
-          cellStr = '"' + cellStr.replace(/"/g, '""') + '"';
-        }
-        return cellStr;
-      });
-      csvContent += processedRow.join(',') + '\n';
-    });
-
-    // Descargar
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const fileName = `Historial_Evaluaciones_${new Date().toISOString().split('T')[0]}.csv`;
-
-    if (navigator.msSaveBlob) {
-      navigator.msSaveBlob(blob, fileName);
-    } else {
-      link.href = URL.createObjectURL(blob);
-      link.download = fileName;
-      link.style.display = 'none';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      setTimeout(() => URL.revokeObjectURL(link.href), 100);
-    }
-
-    alert('✅ Historial descargado correctamente\n\n' + history.length + ' evaluaciones exportadas.');
-  } catch (error) {
-    console.error('Error al exportar historial:', error);
-    alert('❌ Error al descargar: ' + error.message);
-  }
-}
+function exportHistoryExcel(){try{if(!history.length){alert('⚠️ No hay evaluaciones en el historial para exportar.');return;}
+const ks=Object.keys(MODULES),labs=ks.map(m=>MODULES[m].label),sorted=[...history].sort((a,b)=>b.timestamp-a.timestamp);
+const res=[['Fecha','Evaluado','RUT','Cargo','Local','Turno','Evaluador',...labs.map(l=>l+' %'),'% Total','Estado'],
+...sorted.map(r=>[r.fecha||'',r.nombre,r.rut,r.cargo,r.local,r.turno||'',r.evaluador,...ks.map(m=>(r.mods&&typeof r.mods[m]==='number')?r.mods[m]:''),r.overall,r.estado])];
+const det=[['Fecha','Evaluado','Dimensión','Criterio','Resultado','Observación']];
+sorted.forEach(r=>(r.det||[]).forEach(d=>det.push([r.fecha||'',r.nombre,...d])));
+const sh=[{name:'Resumen',rows:res,hdr:1,w:[12,26,14,14,18,10,22,...labs.map(()=>16),12,22]}];
+if(det.length>1)sh.push({name:'Detalle',rows:det,hdr:1,w:[12,26,22,52,12,36]});
+downloadXlsx(sh,'Resumen_Evaluaciones_'+new Date().toISOString().slice(0,10)+'.xlsx');toast('✅ Resumen descargado ('+history.length+' evaluaciones)');}catch(e){console.error(e);alert('❌ Error al generar Excel: '+e.message);}}
+function downloadRecord(ix){const r=history[ix];if(!r)return;if(!r.rows){alert('Esta evaluación se guardó con una versión anterior y solo conserva el resumen.');return;}
+downloadXlsx([{name:'Evaluación',rows:r.rows,w:[34,60,18,40],b1:true}],'Evaluacion_'+(r.nombre||'Garzon').trim().replace(/\s+/g,'_')+'_'+(r.fecha||'sin_fecha')+'.xlsx');}
+function deleteRecord(ix){if(!confirm('¿Eliminar esta evaluación del historial?'))return;history.splice(ix,1);localStorage.setItem('eval_history',JSON.stringify(history));renderHistory();}
 
 function clearHistory() {
   if (confirm('¿Eliminar todo el historial de evaluaciones?')) {
@@ -1970,6 +1934,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  applyBrand();
   console.log('✅ Aplicación inicializada correctamente');
 });
 
